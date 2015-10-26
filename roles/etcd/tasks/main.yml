@@ -1,5 +1,19 @@
 ---
-- name: generate systemd unit file
+- name: check if etcd has been already bootstrapped
+  sudo: yes
+  command: grep 'initial-cluster-state existing' /usr/lib/systemd/system/etcd.service
+  register: etcd_bootstrap_check
+  run_once: True
+  ignore_errors: True
+  changed_when: False
+  tags:
+    - etcd
+
+- debug: etcd_bootstrap_check.rc
+  tags:
+    - etcd
+
+- name: generate systemd unit file to bootstrap etcd
   sudo: yes
   template:
     src: etcd.service.j2
@@ -7,6 +21,7 @@
     owner: root
     group: root
     mode: 0644
+  when: etcd_bootstrap_check.rc != 0
   notify:
     - reload systemd
     - restart etcd
@@ -32,12 +47,35 @@
   tags:
     - etcd
 
-- name: enable and start etcd
+- name: enable and bootstrap etcd
   sudo: yes
   service:
     name: etcd
     enabled: yes
     state: started
+  tags:
+    - etcd
+
+# Change cluster state to 'existing' for correct service restarts
+- name: change etcd initial cluster state
+  set_fact:
+    etcd_initial_cluster_state: existing
+  when: etcd_bootstrap_check.rc != 0
+  tags:
+    - etcd
+
+- name: generate systemd unit file for bootstrapped etcd
+  sudo: yes
+  template:
+    src: etcd.service.j2
+    dest: /usr/lib/systemd/system/etcd.service
+    owner: root
+    group: root
+    mode: 0644
+  when: etcd_bootstrap_check.rc != 0
+  notify:
+    - reload systemd
+    - restart etcd
   tags:
     - etcd
 
