@@ -9,10 +9,6 @@
   tags:
     - etcd
 
-- debug: var=etcd_bootstrap_check.stdout
-  tags:
-    - etcd
-
 - name: generate systemd unit file to bootstrap etcd
   sudo: yes
   template:
@@ -21,7 +17,7 @@
     owner: root
     group: root
     mode: 0644
-  when: etcd_bootstrap_check.stdout | match 'existing'
+  when: etcd_bootstrap_check.stdout | match('existing')
   notify:
     - reload systemd
     - restart etcd
@@ -56,15 +52,14 @@
   tags:
     - etcd
 
-# Change cluster state to 'existing' for correct service restarts
-- name: change etcd initial cluster state
+- name: change etcd initial cluster state to existing
   set_fact:
     etcd_initial_cluster_state: existing
-  when: etcd_bootstrap_check.stdout | match 'existing'
+  when: etcd_bootstrap_check.stdout | match('existing')
   tags:
     - etcd
 
-- name: generate systemd unit file for bootstrapped etcd
+- name: generate new systemd unit file for bootstrapped etcd
   sudo: yes
   template:
     src: etcd.service.j2
@@ -72,7 +67,7 @@
     owner: root
     group: root
     mode: 0644
-  when: etcd_bootstrap_check.stdout | match 'existing'
+  when: etcd_bootstrap_check.stdout | match('existing')
   notify:
     - reload systemd
     - restart etcd
