@@ -3,6 +3,14 @@
 
   var mesosApp = angular.module('mesos');
 
+  function getMasterUrl() {
+    return '/mesos';
+  }
+
+  function getSlaveUrl(slaveId) {
+    return '/mesos/slave/' + slaveId;
+  }
+
   function hasSelectedText() {
     if (window.getSelection) {  // All browsers except IE before version 9.
       var range = window.getSelection();
@@ -14,7 +22,7 @@
   // Invokes the pailer for the specified host and path using the
   // specified window_title.
   function pailer(host, path, window_title) {
-    var url = host + 'files/read.json?path=' + path;
+    var url = host + '/files/read.json?path=' + path;
     var pailer =
       window.open('static/pailer.html', url, 'width=580px, height=700px');
 
@@ -254,7 +262,7 @@
     });
 
     var poll = function() {
-      $http.get('master/state.json',
+      $http.get(getMasterUrl() + '/master/state.json',
                 {transformResponse: function(data) { return data; }})
         .success(function(data) {
           if (update($scope, $timeout, data)) {
@@ -325,10 +333,7 @@
           [{label: 'Continue'}]
         ).open();
       } else {
-        pailer(
-            '/mesos/',
-            '/master/log',
-            'Mesos Master');
+        pailer(getMasterUrl(), '/master/log', 'Mesos Master');
       }
     };
   });
@@ -379,7 +384,7 @@
 
       var pid = $scope.slaves[$routeParams.slave_id].pid;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/mesos/slave/' + $routeParams.slave_id + '/';
+      var host = getSlaveUrl($routeParams.slave_id);
 
       $scope.log = function($event) {
         if (!$scope.state.external_log_file && !$scope.state.log_dir) {
@@ -398,7 +403,7 @@
         $top.start(host, $scope);
       }
 
-      $http.jsonp('/mesos/slave/' + $routeParams.slave_id + '/' + id + '/state.json?jsonp=JSON_CALLBACK')
+      $http.jsonp(getSlaveUrl($routeParams.slave_id) + '/' + id + '/state.json?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -468,14 +473,14 @@
 
       var pid = $scope.slaves[$routeParams.slave_id].pid;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/mesos/slave/' + $routeParams.slave_id + '/';
+      var host = getSlaveUrl($routeParams.slave_id);
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
         $top.start(host, $scope);
       }
 
-      $http.jsonp(host + id + '/state.json?jsonp=JSON_CALLBACK')
+      $http.jsonp(host + '/' +id + '/state.json?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -540,14 +545,14 @@
 
       var pid = $scope.slaves[$routeParams.slave_id].pid;
       var id = pid.substring(0, pid.indexOf('@'));
-      var host = '/mesos/slave/' + $routeParams.slave_id + '/';
+      var host = getSlaveUrl($routeParams.slave_id);
 
       // Set up polling for the monitor if this is the first update.
       if (!$top.started()) {
         $top.start(host, $scope);
       }
 
-      $http.jsonp(host + id + '/state.json?jsonp=JSON_CALLBACK')
+      $http.jsonp(host + '/' + id + '/state.json?jsonp=JSON_CALLBACK')
         .success(function (response) {
           $scope.state = response;
 
@@ -646,11 +651,11 @@
 
     var pid = slave.pid;
     var id = pid.substring(0, pid.indexOf('@'));
-    var host = '/mesos/slave/' + $routeParams.slave_id + '/';
+    var host = getSlaveUrl($routeParams.slave_id);
 
     // Request slave details to get access to the route executor's "directory"
     // to navigate directly to the executor's sandbox.
-    $http.jsonp(host + id + '/state.json?jsonp=JSON_CALLBACK')
+    $http.jsonp(host + '/' + id + '/state.json?jsonp=JSON_CALLBACK')
       .success(function(response) {
 
         function matchFramework(framework) {
@@ -714,13 +719,13 @@
         $scope.slave_id = $routeParams.slave_id;
         $scope.path = $routeParams.path;
 
-        var url = '/mesos/slave/' + $scope.slave_id + '/files/browse.json?jsonp=JSON_CALLBACK';
+        var url = getSlaveUrl($routeParams.slave_id) + '/files/browse.json?jsonp=JSON_CALLBACK';
 
         $scope.pail = function($event, path) {
-          pailer('/mesos/slave/' + $scope.slave_id + '/', path, decodeURIComponent(path));
+          pailer(getSlaveUrl($routeParams.slave_id), path, decodeURIComponent(path));
         };
 
-        $scope.slave_host = '/mesos/slave/' + $scope.slave_id + '/';
+        $scope.slave_host = getSlaveUrl($routeParams.slave_id);
         // TODO(bmahler): Try to get the error code / body in the error callback.
         // This wasn't working with the current version of angular.
         $http.jsonp(url, {params: {path: $routeParams.path}})
